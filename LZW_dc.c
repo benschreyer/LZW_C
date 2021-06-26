@@ -85,6 +85,10 @@ int main( int argc, char *argv[] )
         exit(0);
     }
 
+    fseek(fp, 0L, SEEK_END);
+    unsigned int file_size = ftell(fp);
+    rewind(fp);
+
     struct linked_list dictionary;
     ll_init(&dictionary);
 
@@ -99,15 +103,22 @@ int main( int argc, char *argv[] )
     
 
     unsigned int longest_entry = 1;
+    int co = 0;
+    unsigned int bytes_read = 0;
     printf("=======================\n");
-    while(!feof(fp))
+    while(bytes_read < file_size)
     {
+        co++;
         //printf("=========================\n");
         unsigned int index = 0;
         fread(&index, 4, 1, fp);
-        printf("%d\n", index);
+        bytes_read+=4;
+
+        printf("%d %d\n", index, co);
 
         struct link* iter = dictionary.start;
+
+        
         for(unsigned int i = 0; i < index;i++)
         {
             iter = iter->next;
@@ -145,8 +156,10 @@ int main( int argc, char *argv[] )
         }
         
         
-
-        ll_append(&dictionary, add_str,iter->length + 1);
+        if(!feof(fp))
+        {
+            ll_append(&dictionary, add_str,iter->length + 1);
+        }
         //struct link* it = dictionary.start;
 
         /*int co = 0;
