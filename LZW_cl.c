@@ -12,8 +12,7 @@ struct link
 {
     struct link* next;
     struct link* prev;
-    char* val;
-    unsigned int length;
+    struct byte_array* val;
 };
 
 struct linked_list
@@ -23,6 +22,19 @@ struct linked_list
     unsigned int length;
 };
 
+struct byte_array
+{
+    char* data;
+    unsigned int length;
+};
+
+struct byte_array* ba_init(unsigned int len)
+{
+    struct byte_array* ret = (struct byte_array*) malloc(sizeof(struct byte_array));
+    ret->data = (char*)malloc(sizeof(char) * len);
+    ret->length = len;
+    return ret;
+}
 
 
 void ll_init(struct linked_list* list)
@@ -32,14 +44,14 @@ void ll_init(struct linked_list* list)
     list->end = NULL;
 }
 
-void ll_append(struct linked_list* list, char* val, unsigned int len)
+void ll_append(struct linked_list* list, struct byte_array* val)
 {
-
+    printf("MALLOC 0\n");
     struct link* temp = (struct link*) malloc(sizeof(struct link));
     temp->prev = list->end;
-    temp->next = NULL;
+    temp->next = (struct link*) NULL;
     temp->val = val;
-    temp->length = len;
+
 
     if(list->start == NULL || list->length == 0)
     {
@@ -94,7 +106,7 @@ int main( int argc, char *argv[] )
         }
 
         
-
+        printf("MALLOC 1\n");
         char* out_name = (char*) malloc((alen + 1 + 4) * sizeof(char));
 
         memcpy(out_name, argv[2], alen);
@@ -113,10 +125,12 @@ int main( int argc, char *argv[] )
 
         for(unsigned int i = 0; i < 256;i++)
         {
-            char* temp_add = malloc(sizeof(char) * 2);
-            temp_add[0] = (char) i;
-            temp_add[1] = (char) NULL;
-            ll_append(&dictionary, temp_add, 1);
+
+            struct byte_array* temp_barray = ba_init(1);
+            temp_barray->data[0] = (char) i;
+            
+
+            ll_append(&dictionary, temp_barray);
         }
 
         
@@ -150,7 +164,7 @@ int main( int argc, char *argv[] )
         while(bytes_read < file_size)
         {
             bool skip_dict = false;
-            printf("====================\n");
+            printf("====================%d\t%d\n",dictionary.length,bytes_read);
             lc+=1;
             char* read = NULL;
             unsigned int read_length = 0;
@@ -158,24 +172,22 @@ int main( int argc, char *argv[] )
             {
                 read_length = longest_entry + 1;
                 bytes_read += read_length;
-                
-                read = (char*) malloc(sizeof(char) * (read_length + 1));
+                printf("MALLOC 3\n");
+                read = (char*) malloc(sizeof(char) * (read_length));
                 fread(read, 1, read_length, fp);
-                printf("READ %d\n", read_length);
-                read[read_length] = (char) NULL ;
+
 
             }
             else
             {
                 read_length = file_size - bytes_read;
                 bytes_read += read_length;
-                
-                read = (char*) malloc(sizeof(char) * (read_length + 1));
+                printf("MALLOC 4\n");
+                read = (char*) malloc(sizeof(char) * (read_length));
                 fread(read, 1, read_length, fp);
-                read[read_length] = (char) NULL;
                 skip_dict = true;
             }
-            printf("[%s]\n READ IN\n",read);
+            //printf("[%s]\n READ IN\n",read);
             struct link* iter = dictionary.start;
             
             unsigned int longest_match = 0;
@@ -188,9 +200,9 @@ int main( int argc, char *argv[] )
                 
                 unsigned int match_len = 0;
                 bool iter_cont = false;
-                for(int i = 0; i < read_length && i < iter->length;i++)
+                for(int i = 0; i < read_length && i < iter->val->length;i++)
                 {
-                    if(iter->val[i] != read[i])
+                    if(iter->val->data[i] != read[i])
                     {
                         iter_cont = true;
                         break;
@@ -206,7 +218,7 @@ int main( int argc, char *argv[] )
                     if(match_len > longest_match)
                     {
                         longest_match = match_len;
-                        longest_match_buf = iter->val;
+                        longest_match_buf = iter->val->data;
                         match_index = ik;
                     }
 
@@ -215,7 +227,7 @@ int main( int argc, char *argv[] )
                 iter = iter->next;
                 ik++;
             }
-            printf("%s longest match ptr\n",longest_match_buf);
+            //printf("%s longest match ptr\n",longest_match_buf);
             //printf("%d sizeof uint\n", sizeof(unsigned int));
             unsigned int cutoff = 0;
             /*for(unsigned int i = 0;i < 32;i++)
@@ -237,11 +249,11 @@ int main( int argc, char *argv[] )
 
 
             fputc((char) nbytes,wp);*/
-            printf("%d MATHC IND\n", match_index);
+            //printf("%d MATHC IND\n", match_index);
             //fwrite(&match_index, 4, 1, wp);
             if(match_index < 128)
             {
-                printf("SINGLE BYTE %x HEX OF SINGLE WIDTH %d VAL OF GRTST BIT\n",(char)(match_index & 0x7F), (unsigned int)(char)(match_index & 0x7F) & 0x80);
+                //printf("SINGLE BYTE %x HEX OF SINGLE WIDTH %d VAL OF GRTST BIT\n",(char)(match_index & 0x7F), (unsigned int)(char)(match_index & 0x7F) & 0x80);
                 char write_char = (char)(match_index & 0x7F);
                 fwrite(&write_char, 1, 1, wp);
             }
@@ -252,7 +264,7 @@ int main( int argc, char *argv[] )
                 {
                     if( (0xFF << (8*(3 - i))) & match_index)
                     {
-                        printf("%d break on\n", i);
+                        //printf("%d break on\n", i);
                         bytes_needed = (4 - i);
                         break;
                     }
@@ -260,10 +272,10 @@ int main( int argc, char *argv[] )
                 
                 char write_char = ((char) bytes_needed) | 0x80;
                 fwrite(&write_char, 1, 1, wp);
-                printf("MATCH IND HEX %x\t", match_index);
+                //printf("MATCH IND HEX %x\t", match_index);
                 //match_index = match_index << (8 * (4 - bytes_needed));
                 fwrite(&match_index, 1, bytes_needed, wp);
-                printf("MULTI BYTE\t%x written, %u\tWRITE CHAR %x\n",match_index, bytes_needed, 0xFF & (unsigned int)write_char);
+                //printf("MULTI BYTE\t%x written, %u\tWRITE CHAR %x\n",match_index, bytes_needed, 0xFF & (unsigned int)write_char);
                 //printf("%u MULTI BYTE %u \t %u HEX OF SINGLE WIDTH %d VAL OF GRTST BIT\n",bytes_needed,match_index,0xFF & (unsigned int)(0x80 ^ (char)(bytes_needed)), 0xFF & (unsigned int)(write_char) & 0x80);
             
             }
@@ -276,14 +288,15 @@ int main( int argc, char *argv[] )
             {
                 bytes_read--;
                 ungetc(read[read_length - i - 1], fp);
-                printf("[%c] UNUSED\n", read[read_length - i - 1]);
+                //printf("[%c] UNUSED\n", read[read_length - i - 1]);
             }
             if(!skip_dict)
             {
 
-                char* to_add = (char *) malloc(sizeof(char) * (2 + longest_match));
-                memcpy(to_add, read, 1 + longest_match);
-                to_add[2 + longest_match] = (char) NULL;
+                struct byte_array* to_add = ba_init(longest_match + 1);
+                
+                printf("MALLOC 5\n");
+                memcpy(to_add->data, read, 1 + longest_match);
 
                 //Seek back unused input
                 //fseek(fp, -1*(read_length - longest_match), SEEK_CUR);
@@ -291,7 +304,7 @@ int main( int argc, char *argv[] )
                 //to_add[2 + longest_match] = (char) NULL;
                 //printf("to add s fault\n");
 
-                ll_append(&dictionary, to_add, 1 + longest_match);
+                ll_append(&dictionary, to_add);
                 
                 if(longest_entry < 1+longest_match)
                 {
@@ -301,19 +314,19 @@ int main( int argc, char *argv[] )
 
             //printf("ADD\n%s \nADD\n %d\n",to_add, 1 +longest_match);
             
-            free(read);
-            printf("Total Read %d \t %d\n====================\n",bytes_read,file_size);
+            //free(read);
+            //printf("Total Read %d \t %d\n====================\n",bytes_read,file_size);
         }
 
         struct link* it = dictionary.start;
-        printf("=======================\n");
+        //printf("=======================\n");
         int ct = 0;
         printf("%d SOF CHAR %d\n",dictionary.length,(int)sizeof(char));
         while(it != NULL)
         {
             ct++;
             printf("{%d}\t\t",ct);
-            print_bytes(it->val,it->length);
+            print_bytes(it->val->data,it->val->length);
             it = it->next;
         }
         
@@ -337,6 +350,7 @@ int main( int argc, char *argv[] )
 
         FILE* wp;
 
+        printf("MALLOC 6\n");
         char* out_name = (char*) malloc(sizeof(char) * (alen - 4 + 1));
 
         memcpy(out_name, argv[2], alen - 4);
@@ -358,12 +372,15 @@ int main( int argc, char *argv[] )
         struct linked_list dictionary;
         ll_init(&dictionary);
 
+        
         for(unsigned int i = 0; i < 256;i++)
         {
-            char* temp_add = malloc(sizeof(char) * 2);
-            temp_add[0] = (char) i;
-            temp_add[1] = (char) NULL;
-            ll_append(&dictionary, temp_add, 1);
+
+            struct byte_array* temp_barray = ba_init(1);
+            temp_barray->data[0] = (char) i;
+            
+
+            ll_append(&dictionary, temp_barray);
         }
 
         
@@ -407,7 +424,7 @@ int main( int argc, char *argv[] )
             }
             //printf("%p \n", iter);
             //printf("%s %d\n", iter->val,index);
-            fwrite(iter->val, 1, iter->length,wp);
+            fwrite(iter->val->data, 1, iter->val->length,wp);
             index = 0;
             leading_byte = 0;
             fread(&leading_byte, 1, 1, fp);
@@ -433,8 +450,12 @@ int main( int argc, char *argv[] )
             }
             ungetc(leading_byte, fp);
 
-            char* add_str = (char*) malloc(sizeof(char) * (iter->length + 2));
-            memcpy(add_str, iter->val, iter->length);
+            printf("MALLOC 8\n");
+
+
+            struct byte_array* add_data = ba_init(iter->val->length + 1);
+
+            memcpy(add_data->data, iter->val->data, iter->val->length);
 
             struct link* iter2 = dictionary.start;
             for(unsigned int i = 0; i < index;i++)
@@ -442,21 +463,21 @@ int main( int argc, char *argv[] )
                 iter2 = iter2->next;
             }
 
-            add_str[iter->length + 1] = NULL;
+
 
             if(index >= dictionary.length)
             {
-                add_str[iter->length] = add_str[0];
+                add_data->data[iter->val->length] = add_data->data[0];
             }
             else
             {
-                add_str[iter->length] = iter2->val[0];
+                add_data->data[iter->val->length] = iter2->val->data[0];
             }
             
             
             if(!feof(fp))
             {
-                ll_append(&dictionary, add_str,iter->length + 1);
+                ll_append(&dictionary, add_data);
             }
             //struct link* it = dictionary.start;
 
