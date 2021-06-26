@@ -238,7 +238,37 @@ int main( int argc, char *argv[] )
 
             fputc((char) nbytes,wp);*/
             printf("%d MATHC IND\n", match_index);
-            fwrite(&match_index, 4, 1, wp);
+            //fwrite(&match_index, 4, 1, wp);
+            if(match_index < 128)
+            {
+                printf("SINGLE BYTE %x HEX OF SINGLE WIDTH %d VAL OF GRTST BIT\n",(char)(match_index & 0x7F), (unsigned int)(char)(match_index & 0x7F) & 0x80);
+                char write_char = (char)(match_index & 0x7F);
+                fwrite(&write_char, 1, 1, wp);
+            }
+            else
+            {
+                unsigned int bytes_needed = 0;
+                for(int i = 0;i < 4;i++)
+                {
+                    if( (0xFF << (8*(3 - i))) & match_index)
+                    {
+                        printf("%d break on\n", i);
+                        bytes_needed = (4 - i);
+                        break;
+                    }
+                }
+                
+                char write_char = ((char) bytes_needed) | 0x80;
+                fwrite(&write_char, 1, 1, wp);
+                printf("MATCH IND HEX %x\t", match_index);
+                //match_index = match_index << (8 * (4 - bytes_needed));
+                fwrite(&match_index, 1, bytes_needed, wp);
+                printf("MULTI BYTE\t%x written, %u\tWRITE CHAR %x\n",match_index, bytes_needed, 0xFF & (unsigned int)write_char);
+                //printf("%u MULTI BYTE %u \t %u HEX OF SINGLE WIDTH %d VAL OF GRTST BIT\n",bytes_needed,match_index,0xFF & (unsigned int)(0x80 ^ (char)(bytes_needed)), 0xFF & (unsigned int)(write_char) & 0x80);
+            
+            }
+
+
             //printf("%u cutoff!\n", cutoff);
             //fwrite(longest_match_buf, 1, longest_match, wp);
             //fwrite(read + longest_match, 1, read_length - longest_match, wp);
@@ -345,10 +375,26 @@ int main( int argc, char *argv[] )
         while(bytes_read < file_size)
         {
             co++;
-            //printf("=========================\n");
+            printf("=========================\n");
+
+            char leading_byte = 0;
+
             unsigned int index = 0;
-            fread(&index, 4, 1, fp);
-            bytes_read+=4;
+            fread(&leading_byte, 1, 1, fp);
+            printf("%x LEADING BYTE\n",0xFF & (unsigned int)leading_byte);
+            if((leading_byte & 0x80) == 0)
+            {
+                index = 0xFF & (unsigned int)leading_byte;
+                bytes_read+=1;
+            }
+            else
+            {
+                unsigned int bytes_needed = 0xFF & (unsigned int) (leading_byte ^ 0x80);
+                bytes_read+=bytes_needed + 1;
+                fread(&index, bytes_needed, 1, fp);
+            }
+
+            
 
             printf("%d %d\n", index, co);
 
@@ -363,13 +409,29 @@ int main( int argc, char *argv[] )
             //printf("%s %d\n", iter->val,index);
             fwrite(iter->val, 1, iter->length,wp);
             index = 0;
-            fread(&index, 4, 1, fp);
+            leading_byte = 0;
+            fread(&leading_byte, 1, 1, fp);
+            printf("%x LEADING BYTE\n",0xFF & (unsigned int)leading_byte);
 
-            for(int i = 3; i >= 0;i--)
+            unsigned int bytes_used = 0;
+            if((leading_byte & 0x80) == 0)
+            {
+                index = 0xFF & (unsigned int)leading_byte;
+            }
+            else
+            {
+                unsigned int bytes_needed = 0xFF & (unsigned int) (leading_byte ^ 0x80);
+                bytes_used=bytes_needed;
+                printf("%d bytes needeed multi\n",bytes_needed);
+                fread(&index, bytes_needed, 1, fp);
+            }
+            
+            for(int i = bytes_used - 1; i >= 0;i--)
             {
                 //printf("%x HEX UNGET\n", (char)0xFF && (index >> (8 * i)),fp);
                 ungetc((char)0xFF & (index >> (8 * i)),fp);
             }
+            ungetc(leading_byte, fp);
 
             char* add_str = (char*) malloc(sizeof(char) * (iter->length + 2));
             memcpy(add_str, iter->val, iter->length);
