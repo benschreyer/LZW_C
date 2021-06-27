@@ -1,20 +1,19 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h> 
+
 
 struct array
 {
     unsigned int element_size;
     unsigned int length;
+    int (*compare)(void* a, void* b);
     void* data;
 };
 
-void array_init(struct array* arr, unsigned int len, unsigned int ele_siz)
+void array_init(struct array* arr, unsigned int len, unsigned int ele_siz, int (*comp)(void* a, void* b))
 {
     arr->length = len;
     arr->element_size = ele_siz;
     arr->data = malloc(arr->length * ele_siz);
+    arr->compare = comp;
 }
 
 void array_set(struct array* arr, unsigned int index, void* set)
@@ -35,9 +34,48 @@ void array_resize(struct array* arr, unsigned int new_siz)
         temp = malloc(arr->element_size * new_siz);
         memcpy((char*)temp, (char*)arr->data ,arr->length * arr->element_size);
     }
-    
+
     arr->data = temp;
     arr->length = new_siz;
+}
+
+
+unsigned int recursive_binary_search(struct array* arr, void* key, unsigned int lower, unsigned int upper)
+{
+    printf("LOWER %u\tUPPER %u\n",lower, upper);
+    if(lower >= upper)
+    {
+        return upper;
+    }
+
+    unsigned int mid = lower + (upper - lower) / 2;
+
+    int compare_result = (*arr->compare)(key, array_get(arr, mid));
+
+    if(compare_result == 0)
+    {
+        return mid;
+    }
+    
+    if(compare_result > 0)
+    {
+        return recursive_binary_search(arr, key, mid + 1, upper);
+    }
+    else
+    {
+        if(mid == 0)
+        {
+            return mid;
+        }
+        return recursive_binary_search(arr, key, lower, mid - 1);
+    }
+
+
+}
+
+unsigned int binary_search(struct array* arr,void* key)
+{
+    return recursive_binary_search(arr, key, 0, arr->length - 1);
 }
 
 void print_int_array(struct array* arr)
@@ -48,7 +86,7 @@ void print_int_array(struct array* arr)
     }
 }
 
-
+/*
 int main(int argc, char* argv[])
 {
     struct array test_arr;
@@ -93,4 +131,4 @@ int main(int argc, char* argv[])
 
 
     return 0;
-}
+}*/
