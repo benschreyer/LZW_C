@@ -1,2 +1,2 @@
 # LZW_C
-dont use this for anything besides an education resource
+dont use this as anything more than an education resource
