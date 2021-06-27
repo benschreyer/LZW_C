@@ -323,7 +323,7 @@ int main( int argc, char *argv[] )
         unsigned int file_size = ftell(fp);
         rewind(fp);
 
-        struct LZW_node dictionary;
+        /*struct LZW_node dictionary;
         LZW_node_init(&dictionary, 0, 0);
         unsigned int num_codes = 0;
         for(unsigned int i = 0; i < 256;i++)
@@ -335,24 +335,37 @@ int main( int argc, char *argv[] )
 
             array_set(dictionary.leaves, i, &temp);
 
-        }
+        }*/
+        struct array* dictionary = (struct array*) malloc(sizeof(struct array));
 
-        
+        array_init(dictionary, 256, sizeof(struct array*), NULL);
+
+        unsigned int num_codes = 0;
+
+        for(unsigned int i = 0;i < 256;i++)
+        {
+            struct array* temp = malloc(sizeof(struct array));
+            array_init(temp, 1, sizeof(char),NULL);
+            char set = (char)i;
+            array_set(temp, 0, &set);
+            array_set(dictionary, i, &temp);
+            num_codes++;
+        }
 
         unsigned int longest_entry = 1;
         int co = 0;
         unsigned int bytes_read = 0;
-        printf("=======================\n");
+        //printf("=======================\n");
         while(bytes_read < file_size)
         {
             co++;
-            printf("=========================\n");
+            //printf("=========================\n");
 
             char leading_byte = 0;
 
             unsigned int index = 0;
             fread(&leading_byte, 1, 1, fp);
-            printf("%x LEADING BYTE\n",0xFF & (unsigned int)leading_byte);
+            //printf("%x LEADING BYTE\n",0xFF & (unsigned int)leading_byte);
             if((leading_byte & 0x80) == 0)
             {
                 index = 0xFF & (unsigned int)leading_byte;
@@ -367,22 +380,20 @@ int main( int argc, char *argv[] )
 
             
 
-            printf("%d %d\n", index, co);
+            //printf("%d %d\n", index, co);
 
-            struct link* iter = dictionary.start;
 
-            
-            for(unsigned int i = 0; i < index;i++)
-            {
-                iter = iter->next;
-            }
             //printf("%p \n", iter);
             //printf("%s %d\n", iter->val,index);
-            fwrite(iter->val->data, 1, iter->val->length,wp);
+            //printf("HERE1\n");
+            struct array* get_index = *((struct array**)array_get(dictionary, index));
+            //printf("HERE2 %p\n",get_index);
+            fwrite(get_index->data, get_index->element_size, get_index->length,wp);
+            //printf("HERE3\n");
             index = 0;
             leading_byte = 0;
             fread(&leading_byte, 1, 1, fp);
-            printf("%x LEADING BYTE\n",0xFF & (unsigned int)leading_byte);
+            //printf("%x LEADING BYTE\n",0xFF & (unsigned int)leading_byte);
 
             unsigned int bytes_used = 0;
             if((leading_byte & 0x80) == 0)
@@ -393,7 +404,7 @@ int main( int argc, char *argv[] )
             {
                 unsigned int bytes_needed = 0xFF & (unsigned int) (leading_byte ^ 0x80);
                 bytes_used=bytes_needed;
-                printf("%d bytes needeed multi\n",bytes_needed);
+                //printf("%d bytes needeed multi\n",bytes_needed);
                 fread(&index, bytes_needed, 1, fp);
             }
             
@@ -404,10 +415,41 @@ int main( int argc, char *argv[] )
             }
             ungetc(leading_byte, fp);
 
-            printf("MALLOC 8\n");
+            //printf("MALLOC 8\n");
+
+            
+            while(num_codes >= dictionary->length)
+            {
+                array_resize(dictionary, dictionary->length * 2);
+                
+            }
+
+            struct array* last_char_source = NULL;
+            char last_char = 0;
+            if(index >= num_codes)
+            {
+                last_char_source = get_index;
+            }
+            else
+            {
+               last_char_source = *((struct array**)array_get(dictionary, index));
+            }
+
+            last_char = *((char*)array_get(last_char_source, 0));
+
+            struct array* to_add = (struct array*) malloc(sizeof(struct array));
+            array_init(to_add, 1 + get_index->length,sizeof(char), NULL);
+            memcpy(to_add->data, get_index->data, get_index->length);
+            array_set(to_add, get_index->length, &last_char);
+            array_set(dictionary, num_codes, &to_add);
+            
 
 
-            struct byte_array* add_data = ba_init(iter->val->length + 1);
+
+            
+            num_codes++;
+
+            /*struct byte_array* add_data = ba_init(iter->val->length + 1);
 
             memcpy(add_data->data, iter->val->data, iter->val->length);
 
@@ -445,7 +487,7 @@ int main( int argc, char *argv[] )
                 co+=1;
                 it = it->next;
             }*/
-            //printf("=========================\n");
+            //printf("=========================\n");*/
         }
         fclose(fp);
         fclose(wp);
