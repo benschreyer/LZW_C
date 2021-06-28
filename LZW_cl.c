@@ -7,22 +7,6 @@
 #include "resizable_array.h"
 #include "LZW_tree.h"
 
-struct link;
-struct linked_list;
-
-struct link
-{
-    struct link* next;
-    struct link* prev;
-    struct byte_array* val;
-};
-
-struct linked_list
-{
-    struct link* start;
-    struct link* end;
-    unsigned int length;
-};
 
 struct byte_array
 {
@@ -39,32 +23,7 @@ struct byte_array* ba_init(unsigned int len)
 }
 
 
-void ll_init(struct linked_list* list)
-{
-    list->length = 0;
-    list->start = NULL;
-    list->end = NULL;
-}
 
-void ll_append(struct linked_list* list, struct byte_array* val)
-{
-    printf("MALLOC 0\n");
-    struct link* temp = (struct link*) malloc(sizeof(struct link));
-    temp->prev = list->end;
-    temp->next = (struct link*) NULL;
-    temp->val = val;
-
-
-    if(list->start == NULL || list->length == 0)
-    {
-        printf("%s  START SET\n", val);
-        list->start = temp;
-        list->end = temp;
-    }
-    list->length++;
-    list->end->next = temp;
-    list->end = temp;
-}
 
 void print_bytes(char* inp, unsigned int len)
 {
