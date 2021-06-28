@@ -1,15 +1,22 @@
-
+//Benjamin Schreyer Resizable Array 6/2021
 
 struct array
 {
+    //Byte width of one array element
     unsigned int element_size;
+    //Number of elements in the array
     unsigned int length;
+    //Compare function, taking pointers so that the array can have any type
     int (*compare)(void* a, void* b);
+    
+    //Pointer to data
     void* data;
 };
 
+
 void array_init(struct array* arr, unsigned int len, unsigned int ele_siz, int (*comp)(void* a, void* b))
 {
+    //Assign properties and allocate memory
     arr->length = len;
     arr->element_size = ele_siz;
     arr->data = malloc(arr->length * ele_siz);
@@ -18,28 +25,32 @@ void array_init(struct array* arr, unsigned int len, unsigned int ele_siz, int (
 
 void array_set(struct array* arr, unsigned int index, void* set)
 {
+    //Copy element_size bytes into the array from the pointer set
     memcpy((char*)arr->data + (arr->element_size) * index, (char*) set, arr->element_size);
 }
 
 void* array_get(struct array* arr, unsigned int index)
 {
+    //Return a pointer to the index'th element
     return (void*)(((char*) arr->data) + index * arr->element_size);
 }
 
 void array_resize(struct array* arr, unsigned int new_siz)
 {
+    //attempt to resize buffer, if it returns NULL(failure), allocate new memory and copy contents free old buffer
     void* temp;
     if(!(temp = realloc(arr->data, arr->element_size * new_siz)))
     {
         temp = malloc(arr->element_size * new_siz);
         memcpy((char*)temp, (char*)arr->data ,arr->length * arr->element_size);
+        free(arr->data);
     }
-
+    
     arr->data = temp;
     arr->length = new_siz;
 }
 
-
+//Binary search using compare function pointer, not validated, user must validate whether key was found manually
 unsigned int recursive_binary_search(struct array* arr, void* key, unsigned int lower, unsigned int upper)
 {
     printf("LOWER %u\tUPPER %u\n",lower, upper);
@@ -73,6 +84,7 @@ unsigned int recursive_binary_search(struct array* arr, void* key, unsigned int 
 
 }
 
+//Wrapper for nicer call
 unsigned int binary_search(struct array* arr,void* key)
 {
     return recursive_binary_search(arr, key, 0, arr->length - 1);
