@@ -7,6 +7,24 @@ struct LZW_node
     unsigned int depth;
 };
 
+//Free all nodes including and under a given node
+void LZW_free(struct LZW_node* node)
+{
+    if(node == NULL)
+    {
+        return;
+    }
+    for(unsigned int i = 0;i < 256;i++)
+    {
+        LZW_free(*((struct LZW_node**)array_get(node->leaves,i)));
+    }
+
+    array_free(node->leaves);
+    //free(node);
+}
+
+
+//Allocate pointer array and array init, set pointers to null
 void LZW_node_init(struct LZW_node* node, unsigned int c, unsigned int d)
 {
     node->leaves = (struct array*) malloc(sizeof(struct array));
@@ -25,6 +43,7 @@ void LZW_node_init(struct LZW_node* node, unsigned int c, unsigned int d)
     node->depth = d;
 }
 
+//Traverse LZW tree based off of a byte_array until you reach a NULL pointer meaning the longest string has been found
 struct LZW_node* LZW_find_longest_match(struct LZW_node* root_node, struct array* byte_array)
 {
     struct LZW_node* curr = root_node;

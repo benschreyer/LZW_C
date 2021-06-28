@@ -241,8 +241,8 @@ int main( int argc, char *argv[] )
             //printf("Total Read %d \t %d\n====================\n",bytes_read,file_size);
         }
 
-
-        
+        printf("LZW_FREE %u\n", num_codes);
+        LZW_free(&dictionary);
 
         fclose(wp);
         fclose(fp);

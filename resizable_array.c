@@ -13,6 +13,12 @@ struct array
     void* data;
 };
 
+//Free memory used by array
+void array_free(struct array* arr)
+{
+    free(arr->data);
+    free(arr);
+}
 
 void array_init(struct array* arr, unsigned int len, unsigned int ele_siz, int (*comp)(void* a, void* b))
 {
